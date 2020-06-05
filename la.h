@@ -552,18 +552,24 @@ public:
         else if (nr() == 2 || nc() == 2) {
             return A(0, 0) * A(1, 1) - A(0, 1) * A(1, 0);
         }
+        else if (nr() == 1 || nc() == 1) {
+            return ( A(0, 0) != 0.0 ) ? 1 : 0;
+        }
 
-        return -11111;
+
+            throw matrix_algebra_error(
+                "The matrix is not square for calculaing the determinant");
+       
     }
 
 
     Matrix<T> adjugate() const
     {
         const Matrix<T>& A(*this);
-        Matrix<T> R( nr(), nc(), 0.0 );
+        Matrix<T> R( A );
         T r = 0;
 
-        if (nr() > 2 || nc() > 2) {
+        if ( nr() == nc() && ( nr() > 2 || nc() > 2 ) ) {
 
             auto lamCofactorMatrix = [](const Matrix<T>& M, int o, int p ) -> Matrix<T> {
                 Matrix<T> R(M.nr() - 1, M.nc() - 1);
@@ -593,7 +599,24 @@ public:
             return R;
         }
 
-        return R;
+        throw matrix_algebra_error(
+                "The matrix is not square for calculaing the adjugate");
+
+    }
+
+    Matrix<T> inverse() const
+    {
+        const Matrix<T>& A(*this);
+
+        if ( nr() == nc() ) {
+            Matrix<T> R( A.adjugate() );
+            R *= ( 1.0 / A.determinant() );
+            
+            return R;
+        }
+
+        throw matrix_algebra_error(
+                "The matrix is not square for calculaing the adjugate");
     }
 
     // Assignment Operator
@@ -805,6 +828,34 @@ public:
         }
 
         return result;
+    }
+
+    Matrix<T> operator*(const T& rhs) const 
+    {
+        Matrix result(_rs, _cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                result(i, j) = this->_m[i][j] * rhs;
+            }
+        }
+
+        return result;
+    }
+
+    Matrix<T>& operator*=(const T& rhs)
+    {
+        //Matrix result(_rs, _cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                this->_m[i][j] *= rhs;
+            }
+        }
+
+        return *this;
     }
 
     Matrix<T>& operator=(const T& r)
