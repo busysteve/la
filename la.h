@@ -556,6 +556,46 @@ public:
         return -11111;
     }
 
+
+    Matrix<T> adjugate() const
+    {
+        const Matrix<T>& A(*this);
+        Matrix<T> R( nr(), nc(), 0.0 );
+        T r = 0;
+
+        if (nr() > 2 || nc() > 2) {
+
+            auto lamCofactorMatrix = [](const Matrix<T>& M, int o, int p ) -> Matrix<T> {
+                Matrix<T> R(M.nr() - 1, M.nc() - 1);
+                for (int i = 0, I = 0; i < M.nr(); i++) {
+                    if (i != o ) {
+                        for (int j = 0, J = 0; j < M.nc(); j++) {
+                            if ( j != p) 
+                            	R(I, J++) = M(i, j);
+                        }
+                        I++;
+                    }
+                }
+                return R;
+            };
+            
+            for (int i = 0; i < R.nr(); i++) {
+                T p = ((i & 1) ? 1 : -1);
+                for (int j = 0; j < R.nc(); j++) {
+                    p *= -1;
+                    Matrix<T> S(lamCofactorMatrix(A, i, j));
+                    R(i, j) = p * S.determinant();
+                }
+            }
+
+            R.transpose();
+
+            return R;
+        }
+
+        return R;
+    }
+
     // Assignment Operator
 
     Matrix<T>& operator=(const Matrix<T>& rhs)
@@ -941,6 +981,4 @@ public:
 };
 
 #endif
-
-
 
