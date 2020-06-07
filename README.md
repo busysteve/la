@@ -11,27 +11,27 @@ The only file needed is **la.h**.  The other flies are for test cases and usage 
 
 ### Vector arithmetic and operations
 The **Vector\<T\>** class supports the following:
->adding
->subtracting
->multiplying
->dividing
->outer product
->dot product
->as well as operations with scalars values
+> adding
+> subtracting
+> multiplying
+> dividing
+> outer product
+> dot product
+> as well as operations with scalars values
 
 
 ### Matrix arithmetic and operations
 The **Martix\<T\>** class supports the following:
->adding
->subtracting
->multiplying
->dividing
->determinant
->adjugate
->transpose
->inverse
->Gauss-Jordan elimination
->as well as operations with Vector\<T\> types and scalars values
+> adding
+> subtracting
+> multiplying
+> dividing
+> determinant
+> adjugate
+> transpose
+> inverse
+> Gauss-Jordan elimination
+> as well as operations with Vector\<T\> types and scalars values
 
 
 
