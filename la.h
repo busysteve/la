@@ -929,6 +929,80 @@ public:
         return *this;
     }
 
+    // Matrix transpose
+    Matrix<T> GJ_elimination( const Matrix<T> &B ) const 
+    {
+        const Matrix<T> &A( *this );
+        if( !A.square() )	
+        {
+             throw matrix_algebra_error(
+                 "The source matrix must be square to perform elimination");
+        }
+        else if( A.nr() != B.nr() )	
+        {
+             throw matrix_algebra_error(
+                 "The augment matrix must have the same number of rows as the source matrix to perform elimination");
+        }
+
+        Matrix<T> G( A );
+        Matrix<T> J( B );
+
+
+	for( int c = 0; c < G.nc(); c++ )
+	{			
+		//T f = 1.0 / G(c,c);
+		for( int r=c; r < G.nr(); r++ )
+		for( int s=r; s < G.nr(); s++ )
+		{
+			if( r != s && G(s,c) != 0.0 )
+			{
+				T f = G(s,c) / G(r,c);
+				//G[r] = G[r] - ( G[c]*f );
+				G[s] = G[s] - ( G[r] * f );
+				J[s] = J[s] - ( J[r] * f );
+			}
+			
+		}
+	}
+        
+	for( int c = G.nc()-1; c > 0; c-- )
+	{			
+		//T f = 1.0 / G(c,c);
+		for( int r=c; r >= 0; r-- )
+		for( int s=r; s >= 0; s-- )
+		{
+			if( r != s && G(s,c) != 0.0 )
+			{
+				T f = G(s,c) / G(r,c);
+				//G[r] = G[r] - ( G[c]*f );
+				G[s] = G[s] - ( G[r] * f );
+				J[s] = J[s] - ( J[r] * f );
+			}
+			
+		}
+	}
+        
+	for( int c = 0; c < G.nc(); c++ )
+	{			
+		T f = 1.0 / G(c,c);
+		if( f != 1.0  )
+		{
+			G[c] = ( G[c] * f );
+			J[c] = ( J[c] * f );
+		}
+		
+	}
+        
+        return J;
+    }
+
+
+    // Matrix transpose
+    inline bool square() const 
+    {
+        return ( _rs == _cs );        
+    }
+
     // Obtain a Vector of the diagonal elements
 
     Vector<T> diag_vec()
@@ -988,6 +1062,7 @@ public:
     {
         return this->_cs;
     }
+
 
     Vector<T> operator[](unsigned int i) const
     {
