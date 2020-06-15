@@ -3,7 +3,10 @@
 #include <vector>
 #include <complex>
 #include <string>
+#include <sstream>
 #include <cstring>
+#include <cstdlib>
+#include <ctime>
 #include <cmath>
 #include <float.h>
 #include <exception>
@@ -132,7 +135,50 @@ public:
         return m;
     }
 
+    Matrix<T> outerDiv(const Vector<T>& v) const
+    {
+        Matrix<T> m((*this).size(), v.size(), 0.0);
+        const Vector<T>& t(*this);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < m.nr(); i++) {
+            //#pragma omp parallel for
+            for (unsigned int j = 0; j < m.nc(); j++)
+                m(i, j) = (v[j] != 0) ? ( t[i] / v[j] ) : ( (T)0.000000000000000001 );
+        }
+
+        return m;
+    }
+
     // Vector | Vector Arithmetic section
+    Vector<T>& func(std::function<T(T)> f)
+    {
+
+// #pragma omp parallel for
+        for ( auto &i : (*this) ) {
+                i = f(i);
+        }
+
+        return (*this);
+    }
+
+    Vector<T>& rand( T start=0, T end=0, int seed=0 )
+    {
+	T diff = end - start;
+
+	if( seed == 0 )
+		std::srand( std::time(nullptr) );
+	else
+		std::srand(seed);
+
+//#pragma omp parallel for
+	for ( auto &i : (*this) ) {
+		i = start + ((T)std::rand()) / ( ( (T)RAND_MAX  ) / diff );
+	}
+
+        return (*this);
+    }
+
 
     T dot(const Vector<T>& v) const
     {
@@ -254,6 +300,22 @@ public:
         return vret;
     }
 
+    Vector<T> divR(T s) const
+    {
+        if (s == (T)0.0)
+            throw vector_algebra_error("Passed in scalar is zero for divsion");
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for divsion");
+
+        Vector<T> vret(std::vector<T>::size(), (T)0.0);
+        for (int i = 0; i < std::vector<T>::size(); i++)
+            vret[i] = s / (*this)[i];
+
+        return vret;
+    }
+
+/*
     Vector<T>& div(T s)
     {
         if (s == (T)0.0)
@@ -268,7 +330,7 @@ public:
 
         return (*this);
     }
-
+*/
     Vector<T> add(T s) const
     {
         if (this->size() == 0)
@@ -392,9 +454,16 @@ public:
         return (-v).sub(l);
     }
 
-    friend Vector<T> operator/(const T& l, const Vector<T>& v)
+    friend Vector<T> operator/(const T l, const Vector<T>& v)
     {
-        return ((v).div((T)1.0 / (T)l));
+    	//std::cout << __func__ << std::endl;
+        return ((v).divR((T)l));
+    }
+
+    friend Vector<T> operator/( const Vector<T>& v, const T l )
+    {
+    	//std::cout << __func__ << std::endl;
+        return ((v).div((T)l));
     }
 
     friend Vector<T> operator*(const T& l, const Vector<T>& v)
@@ -500,6 +569,17 @@ public:
     {
         for (auto l : vl)
             _m.push_back(l);
+
+        _rs = _m.size();
+        _cs = 0;
+
+        if (_rs > 0)
+            _cs = _m[0].size();
+    }
+
+    Matrix(Vector<T> v)
+    {
+    	_m.push_back(v);
 
         _rs = _m.size();
         _cs = 0;
@@ -672,7 +752,7 @@ public:
 
     // Addition
 
-    Matrix<T> operator+(const Matrix<T>& rhs)
+    Matrix<T> operator+(const Matrix<T>& rhs) const 
     {
 
         if (_rs != rhs._rs || _cs != rhs._cs)
@@ -710,7 +790,23 @@ public:
     }
 
     // subtraction of this Matrix and another
-    Matrix<T> operator-(const Matrix<T>& rhs)
+    Matrix<T> operator-(T s)
+    {
+
+        Matrix result(_rs, _cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+
+            for (unsigned int j = 0; j < _cs; j++) {
+                result(i, j) = this->_m[i][j] - s;
+            }
+        }
+
+        return result;
+    }
+
+    Matrix<T> operator-(const Matrix<T>& rhs) const
     {
 
         if (_rs != rhs._rs || _cs != rhs._cs)
@@ -724,6 +820,23 @@ public:
 
             for (unsigned int j = 0; j < _cs; j++) {
                 result(i, j) = this->_m[i][j] - rhs(i, j);
+            }
+        }
+
+        return result;
+    }
+
+
+    Matrix<T> operator-() const
+    {
+
+        Matrix result(_rs, _cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+
+            for (unsigned int j = 0; j < _cs; j++) {
+                result(i, j) = -(this->_m[i][j]);
             }
         }
 
@@ -770,7 +883,64 @@ public:
         return result;
     }
 
-    Matrix<T> operator*(const Matrix<T>& rhs)
+    Matrix<T> mul( T s ) const
+    {
+        unsigned int rs = nr();
+        unsigned int cs = nc();
+
+        //cout << rs << "x" << cs << endl;
+
+        Matrix result(rs, cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < rs; i++) {
+            for (unsigned int j = 0; j < cs; j++) {
+                result(i, j) = s * (*this)(i, j);
+            }
+        }
+
+        return result;
+    }
+
+    Matrix<T> div( T s ) const
+    {
+        unsigned int rs = nr();
+        unsigned int cs = nc();
+
+        //cout << rs << "x" << cs << endl;
+
+        Matrix result(rs, cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < rs; i++) {
+            for (unsigned int j = 0; j < cs; j++) {
+                result(i, j) = (*this)(i, j) / s;
+            }
+        }
+
+        return result;
+    }
+
+    Matrix<T> divR( T s ) const
+    {
+        unsigned int rs = nr();
+        unsigned int cs = nc();
+
+        //cout << rs << "x" << cs << endl;
+
+        Matrix result(rs, cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < rs; i++) {
+            for (unsigned int j = 0; j < cs; j++) {
+                result(i, j) = s / (*this)(i, j);
+            }
+        }
+
+        return result;
+    }
+
+    Matrix<T> operator*(const Matrix<T>& rhs) const
     {
         unsigned int rs = nr();
         unsigned int cs = rhs.nc();
@@ -785,6 +955,44 @@ public:
                 for (unsigned int k = 0; k < rhs.nr(); k++) {
                     result(i, j) += this->_m[i][k] * rhs(k, j);
                 }
+            }
+        }
+
+        return result;
+    }
+
+    Matrix<T> SchurProd(const Matrix<T>& rhs) const
+    {
+        unsigned int rs = nr();
+        unsigned int cs = rhs.nc();
+
+        //cout << rs << "x" << cs << endl;
+
+        Matrix result(rs, cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < rs; i++) {
+            for (unsigned int j = 0; j < cs; j++) {
+                result(i, j) = this->_m[i][j] * rhs(i, j);
+            }
+        }
+
+        return result;
+    }
+
+    Matrix<T> SchurDiv(const Matrix<T>& rhs) const
+    {
+        unsigned int rs = nr();
+        unsigned int cs = rhs.nc();
+
+        //cout << rs << "x" << cs << endl;
+
+        Matrix result(rs, cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < rs; i++) {
+            for (unsigned int j = 0; j < cs; j++) {
+                result(i, j) = this->_m[i][j] / rhs(i, j);
             }
         }
 
@@ -814,6 +1022,25 @@ public:
         return (*this);
     }
 
+    Matrix<T>& rand( T start=0, T end=0, int seed=0 )
+    {
+	T diff = end - start;
+
+	if( seed == 0 )
+		std::srand( std::time(nullptr) );
+	else
+		std::srand(seed);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                (*this)(i, j) = start + ((T)std::rand()) / ( ( (T)RAND_MAX  ) / diff );
+            }
+        }
+
+        return (*this);
+    }
+
     // Matrix/scalar addition
 
     Matrix<T>& operator+(const T& rhs)
@@ -829,6 +1056,7 @@ public:
 
         return result;
     }
+
 
     Matrix<T> operator*(const T& rhs) const 
     {
@@ -876,10 +1104,11 @@ public:
     {
 
         if (r.size() != nc())
-            //return Vector<T>();
-            throw matrix_algebra_error(
-                "The vector dimension does not match this column dimension");
-
+        {
+            std::stringstream ss;
+            ss << "The vector of " << r.size() << " dimension does not match this matrix column dimension " << nc();
+            throw matrix_algebra_error( ss.str().c_str() );
+	}
         Vector<T> result(_rs, 0.0);
 
 #pragma omp parallel for
@@ -1074,6 +1303,20 @@ public:
         return _m[i];
     }
 
+    friend Matrix<T> operator/(const T l, const Matrix<T>& v)
+    {
+    	//std::cout << __func__ << std::endl;
+        return ((v).divR((T)l));
+    }
+
+    friend Matrix<T> operator/( const Matrix<T>& v, const T l )
+    {
+    	//std::cout << __func__ << std::endl;
+        return ((v).div((T)l));
+    }
+
+
+
     friend std::ostream& operator<<(std::ostream& os, const Matrix<T>& m)
     {
 
@@ -1104,6 +1347,8 @@ public:
 
         return os;
     }
+
+
 };
 
 #endif
