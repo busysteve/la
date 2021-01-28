@@ -12,9 +12,17 @@
 #include <thrust/functional.h>
 #include <iostream>
 
-
+// $>  nvcc -std=c++11 -o prime_stl_cuda prime_stl_cuda.cu  -gencode arch=compute_30,code=sm_30
 
 using namespace std;
+
+__device__ int prime_check( int x )
+			{ 
+				for( int i=2; i < x; i++ ) 
+					if( !(x%i) ) 
+						return -1; 
+				return x; 
+			} 
 
 
 int main( int argc, char **argv)
@@ -26,14 +34,7 @@ int main( int argc, char **argv)
 
 	thrust::sequence( vint.begin(), vint.end(), 2 );
 
-	thrust::transform( vint.begin(), vint.end(), pint.begin(), 
-		[](int x) -> int 
-			{ 
-				for( int i=2; i < x; i++ ) 
-					if( !(x%i) ) 
-						return -1; 
-				return x; 
-			} 
+	thrust::transform( vint.begin(), vint.end(), pint.begin(), prime_check
 		);
 
 
