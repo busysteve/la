@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+// $> g++ -std=c++17 -o prime_stl_par prime_stl_par.cpp -ltbb
 
 using namespace std;
 

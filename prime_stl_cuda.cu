@@ -12,18 +12,23 @@
 #include <thrust/functional.h>
 #include <iostream>
 
-// $>  nvcc -std=c++11 -o prime_stl_cuda prime_stl_cuda.cu  -gencode arch=compute_30,code=sm_30
+// $>  nvcc -std=c++11 -o prime_stl_cuda prime_stl_cuda.cu  -gencode arch=compute_61,code=sm_61
+
 
 using namespace std;
 
-__device__ int prime_check( int x )
+
+struct prime_check
+{
+
+__device__ int operator()( int x )
 			{ 
 				for( int i=2; i < x; i++ ) 
 					if( !(x%i) ) 
 						return -1; 
 				return x; 
-			} 
-
+			} ;
+};
 
 int main( int argc, char **argv)
 {
@@ -33,13 +38,12 @@ int main( int argc, char **argv)
 	thrust::device_vector<int> pint(nums-1);
 
 	thrust::sequence( vint.begin(), vint.end(), 2 );
+	thrust::transform( vint.begin(), vint.end(), pint.begin(), prime_check() );
+	auto new_end = thrust::remove( pint.begin(), pint.end(), -1 );
+	thrust::copy( pint.begin(), new_end, std::ostream_iterator<int>(std::cout, "\n") );
 
-	thrust::transform( vint.begin(), vint.end(), pint.begin(), prime_check
-		);
-
-
-	for( auto i : pint )
-		if( i >= 0 )
-			cout << i << endl;	
+//	for( auto i : pint )
+//		if( i >= 0 )
+//			cout << i << endl;	
 
 }

@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 
+//  $>  g++ -std=c++17 -o prime_stl prime_stl.cpp
+
 
 using namespace std;
 
