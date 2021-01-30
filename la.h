@@ -17,6 +17,7 @@
 #include <iterator>
 #include <numeric>
 #include <initializer_list>
+#include <execution>
 
 #ifndef __BS_Matrix_H
 #define __BS_Matrix_H
@@ -400,12 +401,12 @@ public:
     {
         return div(r);
     }
-
+/*
     Vector<T> operator/(const T& r) const
     {
         return div(r);
     }
-
+*/
     Vector<T>& operator/=(const T& r)
     {
         return div(r);
@@ -1108,7 +1109,8 @@ public:
             std::stringstream ss;
             ss << "The vector of " << r.size() << " dimension does not match this matrix column dimension " << nc();
             throw matrix_algebra_error( ss.str().c_str() );
-	}
+		}
+		
         Vector<T> result(_rs, 0.0);
 
 #pragma omp parallel for
@@ -1117,6 +1119,34 @@ public:
                 result[i] += this->_m[i][j] * r[j];
             }
         }
+
+        return result;
+    }
+
+    Vector<T> pmul(const Vector<T>& r) const
+    {
+
+        if (r.size() != nc())
+        {
+            std::stringstream ss;
+            ss << "The vector of " << r.size() << " dimension does not match this matrix column dimension " << nc();
+            throw matrix_algebra_error( ss.str().c_str() );
+		}
+		
+        Vector<T> result(_rs, 0.0);
+		
+		/*
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                result[i] += this->_m[i][j] * r[j];
+            }
+        }
+		*/
+		
+		std::transform( std::execution::par, _m.begin(), _m.end(), result.begin(), 
+				[&](auto c) -> T { return std::transform_reduce( std::execution::seq, c.begin(), c.end(), r.begin(), 0.0 ); }
+			);
 
         return result;
     }

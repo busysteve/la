@@ -1,4 +1,37 @@
 
+
+#include <chrono>
+#include <atomic>
+
+namespace shino
+{
+    template <typename Clock = std::chrono::high_resolution_clock>
+    class stopwatch
+    {
+        const typename Clock::time_point start_point;
+    public:
+        stopwatch() : 
+            start_point(Clock::now())
+        {}
+
+        template <typename Rep = typename Clock::duration::rep, typename Units = typename Clock::duration>
+        Rep elapsed_time() const
+        {
+            std::atomic_thread_fence(std::memory_order_relaxed);
+            auto counted_time = std::chrono::duration_cast<Units>(Clock::now() - start_point).count();
+            std::atomic_thread_fence(std::memory_order_relaxed);
+            return static_cast<Rep>(counted_time);
+        }
+    };
+
+    using precise_stopwatch = stopwatch<>;
+    using system_stopwatch = stopwatch<std::chrono::system_clock>;
+    using monotonic_stopwatch = stopwatch<std::chrono::steady_clock>;
+}
+
+//using namespace std::literals;
+
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -7,11 +40,10 @@
 #include <cstring>
 #include <cmath>
 #include <float.h>
-#include "tnt/tnt.h"
 #include <initializer_list>
-#include "Signal.h"
 #include "la.h"
 
+using namespace std;
 
 
 template <typename T> int VectorTest()
@@ -63,7 +95,14 @@ template <typename T> int VectorTest()
 		Vector<T> v3( 3, (T)1.0 );
 		Vector<T> v4( 4, (T)2.0 );
 		
-		cout << v3.dot( v4 ) << endl;
+		try 
+		{		
+			cout << v3.dot( v4 ) << endl;
+		}
+		catch ( linear_algebra_error &e )
+		{
+			cerr << endl << e.what() << endl;	
+		}
 	}
 
 	{
@@ -88,7 +127,7 @@ template <typename T> int VectorTest()
 
 		try{
 			cout << mA << " + " << mC << " = " << mA + mC << endl << endl;
-		} catch ( linear_algebra_error e )
+		} catch ( linear_algebra_error &e )
 		{
 			cerr << endl << e.what() << endl;
 		}
@@ -171,16 +210,36 @@ template <typename T> int VectorTest()
 		M.func( [&]( T x ){ return std::cos( PI2 * x); } );
 		cout << endl << M << endl;
 		
-		auto ys = M * amps;
-		cout << endl << ys << endl << ys.size() << endl;
-		cout << endl << ys[1000] << endl << endl;
-		
+		{
+			shino::precise_stopwatch stopwatch;
+
+			auto ys = M * amps;
+			
+			auto actual_wait_time = stopwatch.elapsed_time<unsigned int, std::chrono::microseconds>();
+
+			//cout << endl << ys << endl << ys.size() << endl;
+			cout << endl << ys[1000] << endl << actual_wait_time << "us" << endl;
+		}
+	
+		{
+			shino::precise_stopwatch stopwatch;
+
+			auto ys = M.pmul(amps);
+			
+			auto actual_wait_time = stopwatch.elapsed_time<unsigned int, std::chrono::microseconds>();
+
+			//cout << endl << ys << endl << ys.size() << endl;
+			cout << endl << ys[1000] << endl << actual_wait_time << "us" << endl;
+		}
+	
+	
+/*	
 		Wave wav( framerate, 16 );
 		
 		wav.setsignal(ys, 100.0);
 		
 		wav.write( "quad-tone.wav" );
-		
+*/		
 		std::complex<T> c1( 0, 1 );
 		
 		auto z = std::exp( c1 * 1.5 );
