@@ -208,7 +208,8 @@ template <typename T> int VectorTest()
 		auto args = ts.outer(fs);
 		auto M = args;
 		M.func( [&]( T x ){ return std::cos( PI2 * x); } );
-		cout << endl << M << endl;
+		//cout << endl << M << endl;
+		cout << endl << M[1000] << endl;
 		
 		{
 			shino::precise_stopwatch stopwatch;
@@ -225,6 +226,17 @@ template <typename T> int VectorTest()
 			shino::precise_stopwatch stopwatch;
 
 			auto ys = M.pmul(amps);
+			
+			auto actual_wait_time = stopwatch.elapsed_time<unsigned int, std::chrono::microseconds>();
+
+			//cout << endl << ys << endl << ys.size() << endl;
+			cout << endl << ys[1000] << endl << actual_wait_time << "us" << endl;
+		}
+	
+		{
+			shino::precise_stopwatch stopwatch;
+
+			auto ys = M.tmul(amps);
 			
 			auto actual_wait_time = stopwatch.elapsed_time<unsigned int, std::chrono::microseconds>();
 

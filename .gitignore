@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+prime_stl
+prime_stl_par
+prime_stl_cuda
+

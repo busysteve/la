@@ -17,7 +17,21 @@
 #include <iterator>
 #include <numeric>
 #include <initializer_list>
-#include <execution>
+//#include <execution>
+
+
+#include <thrust/device_vector.h>
+#include <thrust/transform.h>
+#include <thrust/transform_reduce.h>
+#include <thrust/inner_product.h>
+#include <thrust/sequence.h>
+#include <thrust/copy.h>
+#include <thrust/fill.h>
+#include <thrust/replace.h>
+#include <thrust/functional.h>
+
+
+
 
 #ifndef __BS_Matrix_H
 #define __BS_Matrix_H
@@ -1134,18 +1148,29 @@ public:
 		}
 		
         Vector<T> result(_rs, 0.0);
-		
-		/*
-#pragma omp parallel for
-        for (unsigned int i = 0; i < _rs; i++) {
-            for (unsigned int j = 0; j < _cs; j++) {
-                result[i] += this->_m[i][j] * r[j];
-            }
-        }
-		*/
-		
+	/*	
 		std::transform( std::execution::par, _m.begin(), _m.end(), result.begin(), 
-				[&](auto c) -> T { return std::transform_reduce( std::execution::seq, c.begin(), c.end(), r.begin(), 0.0 ); }
+				[&](auto c) -> T { return std::transform_reduce( std::execution::par, c.begin(), c.end(), r.begin(), 0.0 ); }
+			);
+	*/
+        return result;
+    }
+
+    //  nvcc -std=c++14 -O3 -o la-test la-test.cpp  -gencode arch=compute_61,code=sm_61
+    Vector<T> tmul(const Vector<T>& r) const
+    {
+
+        if (r.size() != nc())
+        {
+            std::stringstream ss;
+            ss << "The vector of " << r.size() << " dimension does not match this matrix column dimension " << nc();
+            throw matrix_algebra_error( ss.str().c_str() );
+		}
+		
+        Vector<T> result(_rs, 0.0);
+		
+		thrust::transform( _m.begin(), _m.end(), result.begin(), 
+				[&](auto c) -> T { return thrust::inner_product( c.begin(), c.end(), r.begin(), 0.0 ); }
 			);
 
         return result;
