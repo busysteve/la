@@ -401,10 +401,12 @@ public:
         return div(r);
     }
 
+/*
     Vector<T> operator/(const T& r) const
     {
         return div(r);
     }
+*/
 
     Vector<T>& operator/=(const T& r)
     {
@@ -599,6 +601,25 @@ public:
     {
         _m.clear();
     }
+
+
+
+	Matrix<T> dot(Matrix<T> B) 
+	{
+		auto &A = *this;
+		int m = A.nr();
+		int n = A.nc();
+		int p = B.nc();
+		Matrix<T>  C(m, p);
+		for (int i = 0; i < m; i++) {
+			for (int j = 0; j < p; j++) {
+				for (int k = 0; k < n; k++) {
+					C[i][j] += A[i][k] * B[k][j];
+				}
+			}
+		}
+		return C;
+	}
 
     // recursively find determinant
     T determinant() const
@@ -811,7 +832,7 @@ public:
 
         if (_rs != rhs._rs || _cs != rhs._cs)
             //return Matrix<T>();
-            throw matrix_algebra_error("Matrix dimensions do not match as needed for addition");
+            throw matrix_algebra_error("Matrix dimensions do not match as needed for subtraction");
 
         Matrix result(_rs, _cs, 0.0);
 
@@ -1159,6 +1180,23 @@ public:
     }
 
     // Matrix transpose
+    Matrix<T> t()
+    {
+        auto cs = _rs;
+        auto rs = _cs;
+        Matrix result(rs, cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                result(j, i) = this->_m[i][j];
+            }
+        }
+
+        return (result);
+    }
+
+    // Matrix GJ_elimination
     Matrix<T> GJ_elimination( const Matrix<T> &B ) const 
     {
         const Matrix<T> &A( *this );
@@ -1177,50 +1215,50 @@ public:
         Matrix<T> J( B );
 
 
-	for( int c = 0; c < G.nc(); c++ )
-	{			
-		//T f = 1.0 / G(c,c);
-		for( int r=c; r < G.nr(); r++ )
-		for( int s=r; s < G.nr(); s++ )
-		{
-			if( r != s && G(s,c) != 0.0 )
+		for( int c = 0; c < G.nc(); c++ )
+		{			
+			//T f = 1.0 / G(c,c);
+			for( int r=c; r < G.nr(); r++ )
+			for( int s=r; s < G.nr(); s++ )
 			{
-				T f = G(s,c) / G(r,c);
-				//G[r] = G[r] - ( G[c]*f );
-				G[s] = G[s] - ( G[r] * f );
-				J[s] = J[s] - ( J[r] * f );
+				if( r != s && G(s,c) != 0.0 )
+				{
+					T f = G(s,c) / G(r,c);
+					//G[r] = G[r] - ( G[c]*f );
+					G[s] = G[s] - ( G[r] * f );
+					J[s] = J[s] - ( J[r] * f );
+				}
+				
+			}
+		}
+			
+		for( int c = G.nc()-1; c > 0; c-- )
+		{			
+			//T f = 1.0 / G(c,c);
+			for( int r=c; r >= 0; r-- )
+			for( int s=r; s >= 0; s-- )
+			{
+				if( r != s && G(s,c) != 0.0 )
+				{
+					T f = G(s,c) / G(r,c);
+					//G[r] = G[r] - ( G[c]*f );
+					G[s] = G[s] - ( G[r] * f );
+					J[s] = J[s] - ( J[r] * f );
+				}
+				
+			}
+		}
+			
+		for( int c = 0; c < G.nc(); c++ )
+		{			
+			T f = 1.0 / G(c,c);
+			if( f != 1.0  )
+			{
+				G[c] = ( G[c] * f );
+				J[c] = ( J[c] * f );
 			}
 			
 		}
-	}
-        
-	for( int c = G.nc()-1; c > 0; c-- )
-	{			
-		//T f = 1.0 / G(c,c);
-		for( int r=c; r >= 0; r-- )
-		for( int s=r; s >= 0; s-- )
-		{
-			if( r != s && G(s,c) != 0.0 )
-			{
-				T f = G(s,c) / G(r,c);
-				//G[r] = G[r] - ( G[c]*f );
-				G[s] = G[s] - ( G[r] * f );
-				J[s] = J[s] - ( J[r] * f );
-			}
-			
-		}
-	}
-        
-	for( int c = 0; c < G.nc(); c++ )
-	{			
-		T f = 1.0 / G(c,c);
-		if( f != 1.0  )
-		{
-			G[c] = ( G[c] * f );
-			J[c] = ( J[c] * f );
-		}
-		
-	}
         
         return J;
     }
