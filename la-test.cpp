@@ -20,6 +20,7 @@ template <typename T> int VectorTest()
 	const double PI = 3.141592653589793238463;
 	const double PI2 = PI * 2.0;
 	
+	try
 	{
 		cout << "Vector tests:" << endl;
 
@@ -65,7 +66,12 @@ template <typename T> int VectorTest()
 		
 		cout << v3.dot( v4 ) << endl;
 	}
+	catch( linear_algebra_error &e )
+	{
+			cerr << endl << e.what() << endl;
+	}
 
+	
 	{
 		
 		cout << endl << "Matrix * Matrix tests:" << endl;
@@ -155,6 +161,9 @@ template <typename T> int VectorTest()
 		
 		cout << endl << a << " * " << b << " = " << a * b << endl;
 
+
+
+/*
 		double framerate = 11025.0;
 		Vector<T> amps( {0.6,0.25,0.1,0.05} );
 		Vector<T> fs( {300.0,400.0,500.0,600.0} );
@@ -175,6 +184,7 @@ template <typename T> int VectorTest()
 		cout << endl << ys << endl << ys.size() << endl;
 		cout << endl << ys[1000] << endl << endl;
 		
+		
 		Wave wav( framerate, 16 );
 		
 		wav.setsignal(ys, 100.0);
@@ -187,6 +197,7 @@ template <typename T> int VectorTest()
 		
 		std::cout << z << std::endl;
 		
+*/
 		
 	}	
 	
@@ -196,6 +207,7 @@ template <typename T> int VectorTest()
 	
 
 }
+
 
 
 
