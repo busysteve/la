@@ -20,7 +20,7 @@
 #include <iterator>
 #include <tuple>
 #include <sstream>
-#include <iterator>
+
 
 
 #ifndef __BS_Matrix_H
@@ -84,6 +84,437 @@ void convert_matrix_copy(Matrix<From>& f, Matrix<To>& t)
             t[i][j] = f[i][j];
 }
 
+template <class T>
+class Vector : public std::vector<T> {
+
+public:
+    //static const double PI = 3.141592653589793238463;
+    //static const double PI2 = PI * 2.0;
+
+    Vector<T>() {}
+
+    Vector<T>(int s, T x = (T)(0.0))
+    {
+        std::vector<T>::resize(s, x);
+    }
+
+    Vector<T>(const Vector<T>& r)
+    {
+        for (auto k : r)
+            std::vector<T>::push_back(k);
+    }
+
+    Vector<T>(std::initializer_list<T> l)
+    {
+        for (auto k : l)
+            std::vector<T>::push_back(k);
+    }
+
+    Vector<T>(std::initializer_list<std::initializer_list<T> >& ll)
+    {
+        for (auto l : ll)
+            std::vector<T>::push_back(T(l));
+    }
+
+    Vector<T>(Vector<Vector<T> > ll)
+    {
+        for (auto l : ll)
+            std::vector<T>::push_back(T(l));
+    }
+
+    virtual ~Vector<T>() {}
+
+    // Vector Outer Products
+    Matrix<T> outer(const Vector<T>& v) const
+    {
+        Matrix<T> m((*this).size(), v.size(), 0.0);
+        const Vector<T>& t(*this);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < m.nr(); i++) {
+            //#pragma omp parallel for
+            for (unsigned int j = 0; j < m.nc(); j++)
+                m(i, j) = t[i] * v[j];
+        }
+
+        return m;
+    }
+
+    Matrix<T> outerDiv(const Vector<T>& v) const
+    {
+        Matrix<T> m((*this).size(), v.size(), 0.0);
+        const Vector<T>& t(*this);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < m.nr(); i++) {
+            //#pragma omp parallel for
+            for (unsigned int j = 0; j < m.nc(); j++)
+                m(i, j) = (v[j] != 0) ? ( t[i] / v[j] ) : ( (T)0.000000000000000001 );
+        }
+
+        return m;
+    }
+
+    // Vector | Vector Arithmetic section
+    Vector<T>& func(std::function<T(T)> f)
+    {
+
+// #pragma omp parallel for
+        for ( auto &i : (*this) ) {
+                i = f(i);
+        }
+
+        return (*this);
+    }
+
+    Vector<T>& rand( T start=0, T end=0, int seed=0 )
+    {
+	T diff = end - start;
+
+	if( seed == 0 )
+		std::srand( std::time(nullptr) );
+	else
+		std::srand(seed);
+
+//#pragma omp parallel for
+	for ( auto &i : (*this) ) {
+		i = start + ((T)std::rand()) / ( ( (T)RAND_MAX  ) / diff );
+	}
+
+        return (*this);
+    }
+
+
+    T dot(const Vector<T>& v) const
+    {
+        if (v.size() == 0)
+            throw vector_algebra_error("Passed Vector is zero length for dot product");
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for dot product");
+
+        if (this->size() != v.size() || v.size() == 0)
+            throw vector_algebra_error("Vector sizes do not match as needed for dot product");
+
+        T ret = 0;
+        for (int i = 0; i < this->size(); i++)
+            ret += (*this)[i] * v[i];
+
+        return ret;
+    }
+
+    Vector<T> mul(const Vector<T>& v) const
+    {
+        if (v.size() == 0)
+            throw vector_algebra_error("Passed Vector is zero length for product");
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for product");
+
+        if (this->size() != v.size() || v.size() == 0)
+            throw vector_algebra_error("Vector sizes do not match as needed for product");
+
+        Vector<T> vret(v.size(), (T)0.0);
+        for (int i = 0; i < v.size(); i++)
+            vret[i] = (*this)[i] * v[i];
+
+        return vret;
+    }
+
+    Vector<T> div(const Vector<T>& v) const
+    {
+        if (v.size() == 0)
+            throw vector_algebra_error("Passed Vector is zero length for divsion");
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for divsion");
+
+        if (this->size() != v.size() || v.size() == 0)
+            throw vector_algebra_error("Vector sizes do not match as needed for divsion");
+
+        Vector<T> vret(v.size(), (T)0.0);
+        for (int i = 0; i < v.size(); i++)
+            vret[i] = (*this)[i] / v[i];
+
+        return vret;
+    }
+
+    Vector<T> add(const Vector<T>& v) const
+    {
+        if (v.size() == 0)
+            throw vector_algebra_error("Passed Vector is zero length for addition");
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for addition");
+
+        if (this->size() != v.size() || v.size() == 0)
+            throw vector_algebra_error("Vector sizes do not match as needed for addition");
+
+        Vector<T> vret(v.size(), (T)0.0);
+        for (int i = 0; i < v.size(); i++)
+            vret[i] = (*this)[i] + v[i];
+
+        return vret;
+    }
+
+    Vector<T> sub(const Vector<T>& v) const
+    {
+        if (v.size() == 0)
+            throw vector_algebra_error("Passed Vector is zero length for subtraction");
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for subtraction");
+
+        if (this->size() != v.size() || v.size() == 0)
+            throw vector_algebra_error("Vector sizes do not match as needed for subtraction");
+
+        Vector<T> vret(v.size(), (T)0.0);
+        for (int i = 0; i < v.size(); i++)
+            vret[i] = (*this)[i] - v[i];
+
+        return vret;
+    }
+
+    // Vector | Scalar Arithmetic section
+
+    Vector<T> mul(T s) const
+    {
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for product");
+
+        Vector<T> vret(std::vector<T>::size(), (T)0.0);
+        for (int i = 0; i < std::vector<T>::size(); i++)
+            vret[i] = (*this)[i] * s;
+
+        return vret;
+    }
+
+    Vector<T> div(T s) const
+    {
+        if (s == (T)0.0)
+            throw vector_algebra_error("Passed in scalar is zero for divsion");
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for divsion");
+
+        Vector<T> vret(std::vector<T>::size(), (T)0.0);
+        for (int i = 0; i < std::vector<T>::size(); i++)
+            vret[i] = (*this)[i] / s;
+
+        return vret;
+    }
+
+    Vector<T> divR(T s) const
+    {
+        if (s == (T)0.0)
+            throw vector_algebra_error("Passed in scalar is zero for divsion");
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for divsion");
+
+        Vector<T> vret(std::vector<T>::size(), (T)0.0);
+        for (int i = 0; i < std::vector<T>::size(); i++)
+            vret[i] = s / (*this)[i];
+
+        return vret;
+    }
+
+/*
+    Vector<T>& div(T s)
+    {
+        if (s == (T)0.0)
+            throw vector_algebra_error("Passed in scalar is zero for divsion");
+
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for divsion");
+
+        //Vector<T> vret( std::vector<T>::size(), (T)0.0 );
+        for (int i = 0; i < std::vector<T>::size(); i++)
+            (*this)[i] /= s;
+
+        return (*this);
+    }
+*/
+    Vector<T> add(T s) const
+    {
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for addition");
+
+        Vector<T> vret(std::vector<T>::size(), (T)0.0);
+        for (int i = 0; i < std::vector<T>::size(); i++)
+            vret[i] = (*this)[i] + s;
+
+        return vret;
+    }
+
+    Vector<T> sub(T s) const
+    {
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for subtraction");
+
+        Vector<T> vret(std::vector<T>::size(), (T)0.0);
+        for (int i = 0; i < std::vector<T>::size(); i++)
+            vret[i] = (*this)[i] - s;
+
+        return vret;
+    }
+
+    // Vector Operator Overloading
+    Vector<T> operator-() const
+    {
+        if (this->size() == 0)
+            throw vector_algebra_error("This Vector is zero length for negation");
+
+        Vector<T> ret((*this).mul((T)-1.0));
+
+        return ret;
+    }
+
+    Vector<T> operator-(const Vector<T>& r) const
+    {
+        return sub(r);
+    }
+
+    Vector<T> operator-(const T& r) const
+    {
+        return sub(r);
+    }
+
+    Vector<T> operator+(const Vector<T>& r) const
+    {
+        return add(r);
+    }
+
+    Vector<T> operator+(const T& r) const
+    {
+        return add(r);
+    }
+
+    Vector<T> operator*(const Vector<T>& r) const
+    {
+        return mul(r);
+    }
+
+    Vector<T> operator*(const T& r) const
+    {
+        return mul(r);
+    }
+
+    Vector<T> operator/(const Vector<T>& r) const
+    {
+        return div(r);
+    }
+
+    Vector<T> operator/(const T& r) const
+    {
+        return div(r);
+    }
+
+    Vector<T>& operator/=(const T& r)
+    {
+        return div(r);
+    }
+
+    Vector<T>& operator=(const T& r)
+    {
+        std::vector<T>::clear();
+
+        std::vector<T>::resize(r.size());
+
+        for (int a = 0; a < r.size(); a++)
+            r[a] = (*this)[a];
+
+        return (*this);
+    }
+
+    Vector<T>& range(double begin, double end, double step = 1.0)
+    {
+        this->clear();
+
+        for (double t = begin; t < end; t += step)
+            this->push_back(t);
+
+        return (*this);
+    }
+
+    Vector<T>& range(double end)
+    {
+        return range(0.0, end);
+    }
+
+    /*
+	Vector<T> range( double begin, double end, double step = 0.0 ) const
+	{
+		Vector<T> v;
+		
+		v.range( begin, end, step );
+			 
+		return v;
+	}
+	*/
+
+    friend Vector<T> operator-(const T& l, const Vector<T>& v)
+    {
+        return (-v).sub(l);
+    }
+
+    friend Vector<T> operator/(const T l, const Vector<T>& v)
+    {
+    	//std::cout << __func__ << std::endl;
+        return ((v).divR((T)l));
+    }
+
+    friend Vector<T> operator/( const Vector<T>& v, const T l )
+    {
+    	//std::cout << __func__ << std::endl;
+        return ((v).div((T)l));
+    }
+
+    friend Vector<T> operator*(const T& l, const Vector<T>& v)
+    {
+        return (v).mul(l);
+    }
+
+    friend Vector<T> operator+(const T& l, const Vector<T>& v)
+    {
+        return (v).add(l);
+    }
+
+    //T& operator[](unsigned int i)  { return (*this)[i]; }
+
+    friend std::ostream& operator<<(std::ostream& os, const Vector<T>& v)
+    {
+
+        os << "{";
+
+        if (v.size() > 0) {
+            os << v[0];
+            for (int i = 1; i < v.size(); i++)
+                os << "," << v[i];
+        }
+
+        os << "}";
+
+        return os;
+    }
+
+    std::ostream& print(std::ostream& os = std::cout)
+    {
+        os << "|";
+
+        if ((*this).size() > 0) {
+            os << (*this)[0];
+            for (int i = 1; i < (*this).size(); i++)
+                os << "\t" << (*this)[i];
+        }
+
+        os << "|" << std::endl;
+
+        return os;
+    }
+};
+
 
 
 
@@ -95,7 +526,7 @@ class Matrix {
 
 protected:
 
-    T *_m = nullptr;
+    Vector<Vector<T> > _m;
 
     size_t _rs;
     size_t _cs;
@@ -112,121 +543,28 @@ public:
     {
     }
 
+    Matrix(unsigned int rows, unsigned int cols, const T& x = (T)0.0)
+    {
+        resize(rows, cols, x);
+    }
+
+    Matrix(unsigned int rows, unsigned int cols, const std::initializer_list<T>& il)
+    {
+        set_rows_and_cols(rows, cols, il);
+    }
+
     Matrix<T>& resize(unsigned int rows, unsigned int cols, const T& x = (T)0.0)
     {
+        _m.resize(rows);
 
-	delete _m;
-	
-	_m = nullptr;
-	
-	_m = new T[rows*cols];
-
-	std::fill( _m, _m+(cols*rows), x );
+        for (unsigned int i = 0; i < _m.size(); i++)
+            _m[i].resize(cols, x);
 
         _rs = rows;
         _cs = cols;
 
         return (*this);
     }
-
-
-
-    Matrix(size_t rows, size_t cols, const T& x = (T)0.0)
-    {
-        resize(rows, cols, x);
-    }
-
-    Matrix(size_t rows, size_t cols,  std::initializer_list<T> il)
-    {
-        set_rows_and_cols(rows, cols, il);
-    }
-
-    Matrix(size_t rows, size_t cols,  std::initializer_list< std::initializer_list<T> > il)
-    {
-        set_rows_and_cols(rows, cols, il);
-    }
-
-    Matrix( std::initializer_list< std::initializer_list<T> > il)
-    {
-    
-    	int r=0;
-    	int c=0;
-    	int C=0;
-    	
-    	for( auto i : il )
-    	{
-    		if( c!=0 && C == 0 )
-    			C = c;
-    			
-    		else if( C != c )
-    			throw  matrix_algebra_error("Invalid Initializer Matrix");
-    			
-    		c = 0;
-    			
-    		r++;
-    		for( auto j : i )
-    			c++;
-    	}
-    
-        resize(r, c, (T)0.0);
-        
-        Matrix<T>& M = (*this);
-
-	int x=0;
-	int y=0;
-    	for( auto i : il )
-    	{	
-    		y=0;
-    		for( auto j : i )
-    		{
-    			*( _m+(c*x+y) ) = j;
-    			y++;
-    		}
-    		x++;
-    	}
-
-    }
-
-    void set_cols_and_rows(size_t c, size_t r,  std::initializer_list<T> l)
-    {
-        resize(r, c, (T)0.0);
-        
-        Matrix<T>& M = (*this);
-
-        auto k = l.begin();
-        for (int i = 0; i < M.nc(); i++)
-            for (int j = 0; j < M.nr(); j++, k++)
-                M._m+(r*j+i) = *(k);
-    }
-
-    void set_rows_and_cols(size_t r, size_t c,  std::initializer_list<T> l)
-    {
-        resize(r, c, (T)0.0);
-        
-        Matrix<T>& M = (*this);
-
-        auto k = l.begin();
-        for (int i = 0; i < M.nc(); i++)
-            for (int j = 0; j < M.nr(); j++, k++)
-                *(M._m+(c*i+j)) = *(k);
-    }
-
-
-    void set_rows_and_cols(size_t r, size_t c,  std::initializer_list< std::initializer_list<T> > l)
-    {
-        resize(r, c, (T)0.0);
-        
-        Matrix<T>& M = (*this);
-
-        auto k = l.begin();
-        for (int i = 0; i < M.nc(); i++, k++ )
-        {
-            auto n = (*k).begin();
-            for (int j = 0; j < M.nr(); j++, n++)
-                *(M._m+(c*i+j)) = *(n);
-        }
-    }
-
 
     /*
     Matrix( initializer_list< initializer_list<T> > il )
@@ -242,12 +580,40 @@ public:
     }
 */
 
+    Matrix(Vector<Vector<T> > vl)
+    {
+        for (auto l : vl)
+            _m.push_back(l);
+
+        _rs = _m.size();
+        _cs = 0;
+
+        if (_rs > 0)
+            _cs = _m[0].size();
+    }
+
+    Matrix(Vector<T> v)
+    {
+    	_m.push_back(v);
+
+        _rs = _m.size();
+        _cs = 0;
+
+        if (_rs > 0)
+            _cs = _m[0].size();
+    }
+
     Matrix(const Matrix<T>& r)
     {
         (*this) = r;
     }
 
-    virtual ~Matrix() { delete _m; }
+    virtual ~Matrix() {}
+
+    void clear()
+    {
+        _m.clear();
+    }
 
     // recursively find determinant
     T determinant() const
@@ -358,16 +724,15 @@ public:
         unsigned int new_rows = rhs.nr();
         unsigned int new_cols = rhs.nc();
 
-	delete _m;
-	
-	_m = nullptr;
-	
-        _m = new T[new_rows*new_cols];
-        
+        _m.resize(new_rows);
+        for (unsigned int i = 0; i < _m.size(); i++) {
+            _m[i].resize(new_cols);
+        }
+
         for (unsigned int i = 0; i < new_rows; i++) {
 #pragma omp parallel for
             for (unsigned int j = 0; j < new_cols; j++) {
-                std::copy( rhs._m, rhs._m+(new_rows*new_cols), _m );
+                _m[i][j] = rhs(i, j);
             }
         }
         _rs = new_rows;
@@ -390,9 +755,9 @@ public:
 #pragma omp parallel for
         for (unsigned int i = 0; i < new_rows; i++) {
             for (unsigned int j = 0; j < new_cols; j++) {
-                if ( *(_m+(new_cols*i+j)) != *(rhs._m+(new_cols*i+j)) ) {
+                if (_m[i][j] != rhs(i, j)) {
                     ret = false;
-                    break;
+                    i = j = new_cols;
                 }
             }
         }
@@ -413,8 +778,9 @@ public:
 
 #pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
+
             for (unsigned int j = 0; j < _cs; j++) {
-                *(result._m+(_cs*i+j)) = *(_m+(_cs*i+j) + rhs._m+(_cs*i+j));
+                result(i, j) = this->_m[i][j] + rhs(i, j);
             }
         }
 
@@ -431,14 +797,14 @@ public:
 #pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
-                *(_m+(_cs*i+j)) += *(rhs._m+(_cs*i+j));
+                this->_m[i][j] += rhs(i, j);
             }
         }
 
         return *this;
     }
 
-    // subtraction of a value from each element ofthis Matrix
+    // subtraction of this Matrix and another
     Matrix<T> operator-(T s)
     {
 
@@ -448,7 +814,7 @@ public:
         for (unsigned int i = 0; i < _rs; i++) {
 
             for (unsigned int j = 0; j < _cs; j++) {
-                *(result._m+(_cs*i+j)) = *(_m+(_cs*i+j)) - s;
+                result(i, j) = this->_m[i][j] - s;
             }
         }
 
@@ -468,7 +834,7 @@ public:
         for (unsigned int i = 0; i < _rs; i++) {
 
             for (unsigned int j = 0; j < _cs; j++) {
-                *(result._m+(_cs*i+j)) = *(_m+(_cs*i+j)) - *(rhs._m+(_cs*i+j));
+                result(i, j) = this->_m[i][j] - rhs(i, j);
             }
         }
 
@@ -485,7 +851,7 @@ public:
         for (unsigned int i = 0; i < _rs; i++) {
 
             for (unsigned int j = 0; j < _cs; j++) {
-                *(result._m+(_cs*i+j)) = -*(_m+(_cs*i+j));
+                result(i, j) = -(this->_m[i][j]);
             }
         }
 
@@ -502,7 +868,7 @@ public:
 #pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
-                *(_m+(_cs*i+j)) -= *(rhs._m+(_cs*i+j));
+                this->_m[i][j] -= rhs(i, j);
             }
         }
 
@@ -510,6 +876,27 @@ public:
     }
 
     // Left multiplication of this Matrix and another
+
+    Matrix<T> mul(const Matrix<T>& rhs)
+    {
+        unsigned int rs = nr();
+        unsigned int cs = rhs.nc();
+
+        //cout << rs << "x" << cs << endl;
+
+        Matrix result(rs, cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < rs; i++) {
+            for (unsigned int j = 0; j < cs; j++) {
+                for (unsigned int k = 0; k < rhs.nr(); k++) {
+                    result(i, j) += this->_m[i][k] * rhs(k, j);
+                }
+            }
+        }
+
+        return result;
+    }
 
     Matrix<T> mul( T s ) const
     {
@@ -523,7 +910,7 @@ public:
 #pragma omp parallel for
         for (unsigned int i = 0; i < rs; i++) {
             for (unsigned int j = 0; j < cs; j++) {
-                *( result._m+(_cs*i+j) ) = s * *(_m+(_cs*i+j));
+                result(i, j) = s * (*this)(i, j);
             }
         }
 
@@ -542,7 +929,7 @@ public:
 #pragma omp parallel for
         for (unsigned int i = 0; i < rs; i++) {
             for (unsigned int j = 0; j < cs; j++) {
-                *(result._m+(_cs*i+j)) = *(_m+(_cs*i+j)) / s;
+                result(i, j) = (*this)(i, j) / s;
             }
         }
 
@@ -568,203 +955,87 @@ public:
         return result;
     }
 
-    class mxIterator 
-    {
-    public:
-        using iterator_category = std::forward_iterator_tag;
-        using difference_type   = std::ptrdiff_t;
-        using value_type        = T;
-        using pointer           = T*;
-        using reference         = T&;
-
-        mxIterator(pointer ptr) : m_ptr(ptr) {}
-
-        reference operator*() const { return *m_ptr; }
-        pointer operator->() { return m_ptr; }
-        mxIterator& operator++() { m_ptr++; return *this; }  
-        mxIterator operator++(int) { mxIterator tmp = *this; ++(*this); return tmp; }
-        friend bool operator== (const mxIterator& a, const mxIterator& b) { return a.m_ptr == b.m_ptr; };
-        friend bool operator!= (const mxIterator& a, const mxIterator& b) { return a.m_ptr != b.m_ptr; };  
-
-    protected:
-        pointer m_ptr;
-    };
-
-    // Define an iterator for the container
-    class rowIterator : public mxIterator {
-    public:
-        rowIterator(T* ptr) { mxIterator::m_ptr = ptr; }
-
-        T& operator*() {
-            return *mxIterator::m_ptr;
-        }
-
-        rowIterator& operator++() {
-            mxIterator::m_ptr++;
-            return *this;
-        }
-
-        bool operator!=(const rowIterator& other) {
-            return mxIterator::m_ptr != other.m_ptr;
-        }
-
-    };
-
-    rowIterator row_begin(size_t r) {
-        return rowIterator(_m+(_cs*r));
-    }
-
-    rowIterator row_end(size_t r) {
-        return rowIterator(_m+(_cs*r+_cs));
-    }
-
-
-
-    // Define an iterator for the container
-    class colIterator : public mxIterator {
-    public:
-        colIterator(size_t c, T* ptr) { mxIterator::m_ptr = ptr;  : step_ = c; }
-
-        T& operator*() {
-            return *mxIterator::m_ptr;
-        }
-
-        colIterator& operator++() {
-            mxIterator::m_ptr += step_;
-            return *this;
-        }
-
-        bool operator!=(const colIterator& other) {
-            return mxIterator::m_ptr != other.m_ptr;
-        }
-
-    private:
-        size_t step_;
-    };
-
-    colIterator col_begin(size_t c) const {
-        return colIterator(_cs, _m+(_cs+c));
-    }
-
-    colIterator col_end(size_t c) const {
-        return colIterator(_cs, _m+(_cs*_rs+c));
-    }
-
-
-
     Matrix<T> operator*(const Matrix<T>& rhs) const
     {
-    
-        if (_rs != rhs._cs || _cs != rhs._rs)
-            //return Matrix<T>();
-            throw matrix_algebra_error("Matrix dimensions do not match as needed for multiplication");
-    
-        unsigned int rs = nr();
+        unsigned int rs = nc();
         unsigned int cs = rhs.nc();
 
-        std::cout << nr() << "x" << nc() << std::endl;
-        std::cout << rhs.nr() << "x" << rhs.nc() << std::endl;
-        std::cout << rs << "x" << cs << std::endl;
+        //cout << rs << "x" << cs << endl;
 
         Matrix result(rs, cs, 0.0);
-	/*
 
-	{,1,1,1,1,1}
-	{,1,3,4,6,7}
-	{,10,14,15,18,20}
+#pragma omp parallel for
+        for (unsigned int i = 0; i < nr(); i++) {
+            for (unsigned int j = 0; j < nc(); j++) {
+                for (unsigned int k = 0; k < rhs.nc(); k++) {
+                    result(i, j) += this->_m[i][k] * rhs(k, j);
+                }
+            }
+        }
 
-
-	{,1,1,10}
-	{,1,3,14}
-	{,1,4,15}
-	{,1,6,18}
-	{,1,7,20}
-
-	*/
-
-	size_t ra = nr();
-	size_t ca = nc();
-	size_t rb = rhs.nr();
-	size_t cb = rhs.nc();
-	
-
-	for ( size_t i = 0; i < ra; i++ )
-	{
-		std::cout << std::endl << std::endl;
-		for ( size_t j = 0; j < cb; j++ )
-		{
-			std::cout << std::endl;
-			#pragma omp parallel for
-			for ( size_t k = 0; k < ca; k++ )
-			{
-				auto x = *(_m+(_cs*i+k));
-				auto y = *(rhs._m+(rhs._cs*k+j));
-				
-				std::cout << x << "*" << y << " ";
-				*(result._m+(result._cs*i+j)) += x * y;
-			}
-		}
-	}
         return result;
     }
 
-
-    Matrix<T> mul( const Matrix<T>& rhs) // const
+    Matrix<T> SchurProd(const Matrix<T>& rhs) const
     {
-        if (_rs != rhs._cs || _cs != rhs._rs)
-            //return Matrix<T>();
-            throw matrix_algebra_error("Matrix dimensions do not match as needed for multiplication");
-    
         unsigned int rs = nr();
         unsigned int cs = rhs.nc();
 
-        std::cout << nr() << "x" << nc() << std::endl;
-        std::cout << rhs.nr() << "x" << rhs.nc() << std::endl;
-        std::cout << rs << "x" << cs << std::endl;
+        //cout << rs << "x" << cs << endl;
 
         Matrix result(rs, cs, 0.0);
-	/*
 
-	{,1,1,1,1,1}
-	{,1,3,4,6,7}
-	{,10,14,15,18,20}
+#pragma omp parallel for
+        for (unsigned int i = 0; i < rs; i++) {
+            for (unsigned int j = 0; j < cs; j++) {
+                result(i, j) = this->_m[i][j] * rhs(i, j);
+            }
+        }
 
-
-	{,1,1,10}
-	{,1,3,14}
-	{,1,4,15}
-	{,1,6,18}
-	{,1,7,20}
-
-	*/
-
-	size_t ra = nr();
-	size_t ca = nc();
-	size_t rb = rhs.nr();
-	size_t cb = rhs.nc();
-	
-
-	for ( size_t i = 0; i < ra; i++ )
-	{
-		std::cout << std::endl << std::endl;
-		for ( size_t j = 0; j < cb; j++ )
-		{
-				
-		    	*(result._m+(result._cs*i+j)) = std::transform_reduce(
-			row_begin(i), row_end(i), rhs.col_begin(j), 0,
-				[](const T& a, const T& b ) {
-			    		return a + b;
-				},
-				[](const T& a, const T& b ) {
-			    		return a * b;
-				}
-			);
-			
-		}
-	}
         return result;
     }
 
+    Matrix<T> SchurDiv(const Matrix<T>& rhs) const
+    {
+        unsigned int rs = nr();
+        unsigned int cs = rhs.nc();
+
+        //cout << rs << "x" << cs << endl;
+
+        Matrix result(rs, cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < rs; i++) {
+            for (unsigned int j = 0; j < cs; j++) {
+                result(i, j) = this->_m[i][j] / rhs(i, j);
+            }
+        }
+
+        return result;
+    }
+
+    // Cumulative left multiplication of this Matrix and another
+
+    Matrix<T>& operator*=(const Matrix& rhs)
+    {
+        Matrix result = (*this) * rhs;
+        (*this) = result;
+        return *this;
+    }
+
+    Matrix<T>& func(std::function<T(T)> f)
+    {
+//Matrix result(_rs, _cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                (*this)(i, j) = f(this->_m[i][j]);
+            }
+        }
+
+        return (*this);
+    }
 
     Matrix<T>& rand( T start=0, T end=0, int seed=0 )
     {
@@ -778,7 +1049,7 @@ public:
 #pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
-                _m+(_cs*i+j) = start + ((T)std::rand()) / ( ( (T)RAND_MAX  ) / diff );
+                (*this)(i, j) = start + ((T)std::rand()) / ( ( (T)RAND_MAX  ) / diff );
             }
         }
 
@@ -794,7 +1065,7 @@ public:
 #pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
-                *( result._m+(_cs*i+j) ) = *(_m+(_cs*i+j) ) + rhs;
+                result(i, j) = this->_m[i][j] + rhs;
             }
         }
 
@@ -809,13 +1080,75 @@ public:
 #pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
-                *( result._m+(_cs*i+j) ) = *(_m+(_cs*i+j) ) + rhs;
+                result(i, j) = this->_m[i][j] * rhs;
             }
         }
 
         return result;
     }
 
+    Matrix<T>& operator*=(const T& rhs)
+    {
+        //Matrix result(_rs, _cs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                this->_m[i][j] *= rhs;
+            }
+        }
+
+        return *this;
+    }
+
+    Matrix<T>& operator=(const T& r)
+    {
+        _m.clear();
+
+        _m.resize(r.nr());
+
+        for (int a = 0; a < r.nr(); a++)
+            r[a] = (*this)[a];
+
+        return (*this);
+    }
+
+    // Multiply a Matrix with a Vector
+
+    Vector<T> operator*(const Vector<T>& r) const
+    {
+
+        if (r.size() != nc())
+        {
+            std::stringstream ss;
+            ss << "The vector of " << r.size() << " dimension does not match this matrix column dimension " << nc();
+            throw matrix_algebra_error( ss.str().c_str() );
+	}
+        Vector<T> result(_rs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                result[i] += this->_m[i][j] * r[j];
+            }
+        }
+
+        return result;
+    }
+
+    Vector<T> operator+(const Vector<T>& r) const
+    {
+        Vector<T> result(_rs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                result[i] += this->_m[i][j] + r[j];
+            }
+        }
+
+        return result;
+    }
 
     // Matrix transpose
     Matrix<T>& transpose()
@@ -827,33 +1160,139 @@ public:
 #pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
-                *(result._m+(_rs*j+i) ) = *(_m+(_cs*i+j) );
+                result(j, i) = this->_m[i][j];
             }
         }
 
-        //delete _m;
-        
-        //_m = nullptr;
-        
+        _m.clear();
         //_m = result._m;
         (*this) = result;
-        //_rs = rs;
-        //_cs = cs;
+        _rs = rs;
+        _cs = cs;
 
         return *this;
     }
 
+    // Matrix transpose
+    Matrix<T> GJ_elimination( const Matrix<T> &B ) const 
+    {
+        const Matrix<T> &A( *this );
+        if( !A.square() )	
+        {
+             throw matrix_algebra_error(
+                 "The source matrix must be square to perform elimination");
+        }
+        else if( A.nr() != B.nr() )	
+        {
+             throw matrix_algebra_error(
+                 "The augment matrix must have the same number of rows as the source matrix to perform elimination");
+        }
+
+        Matrix<T> G( A );
+        Matrix<T> J( B );
+
+
+	for( int c = 0; c < G.nc(); c++ )
+	{			
+		//T f = 1.0 / G(c,c);
+		for( int r=c; r < G.nr(); r++ )
+		for( int s=r; s < G.nr(); s++ )
+		{
+			if( r != s && G(s,c) != 0.0 )
+			{
+				T f = G(s,c) / G(r,c);
+				//G[r] = G[r] - ( G[c]*f );
+				G[s] = G[s] - ( G[r] * f );
+				J[s] = J[s] - ( J[r] * f );
+			}
+			
+		}
+	}
+        
+	for( int c = G.nc()-1; c > 0; c-- )
+	{			
+		//T f = 1.0 / G(c,c);
+		for( int r=c; r >= 0; r-- )
+		for( int s=r; s >= 0; s-- )
+		{
+			if( r != s && G(s,c) != 0.0 )
+			{
+				T f = G(s,c) / G(r,c);
+				//G[r] = G[r] - ( G[c]*f );
+				G[s] = G[s] - ( G[r] * f );
+				J[s] = J[s] - ( J[r] * f );
+			}
+			
+		}
+	}
+        
+	for( int c = 0; c < G.nc(); c++ )
+	{			
+		T f = 1.0 / G(c,c);
+		if( f != 1.0  )
+		{
+			G[c] = ( G[c] * f );
+			J[c] = ( J[c] * f );
+		}
+		
+	}
+        
+        return J;
+    }
+
+
+    // Matrix transpose
+    inline bool square() const 
+    {
+        return ( _rs == _cs );        
+    }
+
+    // Obtain a Vector of the diagonal elements
+
+    Vector<T> diag_vec()
+    {
+        Vector<T> result(_rs, 0.0);
+
+#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            result[i] = this->_m[i][i];
+        }
+
+        return result;
+    }
+
+    void set_cols_and_rows(int c, int r, std::initializer_list<T>& l)
+    {
+        resize(r, c, (T)0.0);
+        Matrix<T>& M = (*this);
+
+        auto k = l.begin();
+        for (int i = 0; i < M.nc(); i++)
+            for (int j = 0; j < M.nr(); j++, k++)
+                M[i][j] = *(k);
+    }
+
+    void set_rows_and_cols(int r, int c, std::initializer_list<T> l)
+    {
+        resize(r, c, (T)0.0);
+        Matrix<T>& M = (*this);
+
+        auto k = l.begin();
+        for (int i = 0; i < M.nr(); i++)
+            for (int j = 0; j < M.nc(); j++, k++)
+                M[i][j] = *(k);
+    }
 
     // Access the individual elements
     T& operator()(const unsigned int& row, const unsigned int& col)
     {
-        return *(_m+(_cs*row+col) );
+        return this->_m[row][col];
     }
 
     // Access the individual elements (const)
     const T& operator()(const unsigned int& row, const unsigned int& col) const
     {
-        return *(_m+(_cs*row+col) );
+        return this->_m[row][col];
     }
 
     // Get the number of rows of the Matrix
@@ -869,26 +1308,57 @@ public:
     }
 
 
+    Vector<T> operator[](unsigned int i) const
+    {
+        return _m[i];
+    }
+
+    Vector<T>& operator[](unsigned int i)
+    {
+        return _m[i];
+    }
+
+    friend Matrix<T> operator/(const T l, const Matrix<T>& v)
+    {
+    	//std::cout << __func__ << std::endl;
+        return ((v).divR((T)l));
+    }
+
+    friend Matrix<T> operator/( const Matrix<T>& v, const T l )
+    {
+    	//std::cout << __func__ << std::endl;
+        return ((v).div((T)l));
+    }
+
+
 
     friend std::ostream& operator<<(std::ostream& os, const Matrix<T>& m)
     {
 
-        //os << "{";
+        os << "{";
 
         if (m.nr() > 0) {
-            for (int i = 0; i < m.nr(); i++)
-            {
-                os << std::endl << "{";
-		    for (int j = 0; j < m.nc(); j++)
-		        os << "," << m(i,j);
-                os << "}";
-            }
+            os << m[0];
+            for (int i = 1; i < m.nr(); i++)
+                os << "," << m[i];
         }
         else
             os << "{}";
 
-        //os << "}" << std::endl;
-        os << std::endl;
+        os << "}";
+
+        return os;
+    }
+
+    std::ostream& print(std::ostream& os = std::cout)
+    {
+        if (nr() > 0) {
+            //os << "|";
+            //os << _m[0];
+            for (int i = 0; i < nr(); i++)
+                _m[i].print(os);
+            //os << "|";
+        }
 
         return os;
     }
