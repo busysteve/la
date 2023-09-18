@@ -20,7 +20,7 @@
 #include <iterator>
 #include <tuple>
 #include <sstream>
-
+#include <iterator>
 
 
 #ifndef __BS_Matrix_H
@@ -511,27 +511,6 @@ public:
 
     // Left multiplication of this Matrix and another
 
-    Matrix<T> mul(const Matrix<T>& rhs)
-    {
-        unsigned int rs = nr();
-        unsigned int cs = rhs.nc();
-
-        //cout << rs << "x" << cs << endl;
-
-        Matrix result(rs, cs, 0.0);
-
-#pragma omp parallel for
-        for (unsigned int i = 0; i < rs; i++) {
-            for (unsigned int j = 0; j < cs; j++) {
-                for (unsigned int k = 0; k < rhs.nr(); k++) {
-                    *(result._m+(cs*i+j)) += *(_m+(_cs*i+k)) * *(rhs._m+(_cs*k+j));
-                }
-            }
-        }
-
-        return result;
-    }
-
     Matrix<T> mul( T s ) const
     {
         unsigned int rs = nr();
@@ -589,6 +568,90 @@ public:
         return result;
     }
 
+    class mxIterator 
+    {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = T;
+        using pointer           = T*;
+        using reference         = T&;
+
+        mxIterator(pointer ptr) : m_ptr(ptr) {}
+
+        reference operator*() const { return *m_ptr; }
+        pointer operator->() { return m_ptr; }
+        mxIterator& operator++() { m_ptr++; return *this; }  
+        mxIterator operator++(int) { mxIterator tmp = *this; ++(*this); return tmp; }
+        friend bool operator== (const mxIterator& a, const mxIterator& b) { return a.m_ptr == b.m_ptr; };
+        friend bool operator!= (const mxIterator& a, const mxIterator& b) { return a.m_ptr != b.m_ptr; };  
+
+    protected:
+        pointer m_ptr;
+    };
+
+    // Define an iterator for the container
+    class rowIterator : public mxIterator {
+    public:
+        rowIterator(T* ptr) : mxIterator(ptr) {  }
+
+        T& operator*() {
+            return *mxIterator::m_ptr;
+        }
+
+        rowIterator& operator++() {
+            mxIterator::m_ptr++;
+            return *this;
+        }
+
+        bool operator!=(const rowIterator& other) {
+            return mxIterator::m_ptr != other.m_ptr;
+        }
+
+    };
+
+    rowIterator row_begin(size_t r) {
+        return rowIterator(_m+(_cs*r));
+    }
+
+    rowIterator row_end(size_t r) {
+        return rowIterator(_m+(_cs*r+_cs));
+    }
+
+
+
+    // Define an iterator for the container
+    class colIterator : public mxIterator {
+    public:
+        colIterator(size_t c, T* ptr) : mxIterator(ptr), step_( c ) {}
+
+        T& operator*() {
+            return *mxIterator::m_ptr;
+        }
+
+        colIterator& operator++() {
+            mxIterator::m_ptr += step_;
+            return *this;
+        }
+
+        bool operator!=(const colIterator& other) {
+            return mxIterator::m_ptr != other.m_ptr;
+        }
+
+    private:
+        size_t step_;
+    };
+
+    colIterator col_begin(size_t c) const {
+        return colIterator(_cs, _m+(_cs+c));
+    }
+
+    colIterator col_end(size_t c) const {
+        return colIterator(_cs, _m+(_cs*_rs+c));
+    }
+
+
+
     Matrix<T> operator*(const Matrix<T>& rhs) const
     {
     
@@ -618,7 +681,7 @@ public:
 	{,1,7,20}
 
 	*/
-#pragma omp parallel for
+
 	size_t ra = nr();
 	size_t ca = nc();
 	size_t rb = rhs.nr();
@@ -631,6 +694,7 @@ public:
 		for ( size_t j = 0; j < cb; j++ )
 		{
 			std::cout << std::endl;
+			#pragma omp parallel for
 			for ( size_t k = 0; k < ca; k++ )
 			{
 				auto x = *(_m+(_cs*i+k));
@@ -645,24 +709,59 @@ public:
     }
 
 
-    Matrix<T> mul(const Matrix<T>& rhs) const
+    Matrix<T> mul( const Matrix<T>& rhs) // const
     {
-        unsigned int rs = nc();
+        if (_rs != rhs._cs || _cs != rhs._rs)
+            //return Matrix<T>();
+            throw matrix_algebra_error("Matrix dimensions do not match as needed for multiplication");
+    
+        unsigned int rs = nr();
         unsigned int cs = rhs.nc();
 
-        //cout << rs << "x" << cs << endl;
+        std::cout << nr() << "x" << nc() << std::endl;
+        std::cout << rhs.nr() << "x" << rhs.nc() << std::endl;
+        std::cout << rs << "x" << cs << std::endl;
 
         Matrix result(rs, cs, 0.0);
+	/*
 
-#pragma omp parallel for
-        for (unsigned int i = 0; i < nr(); i++) {
-            for (unsigned int j = 0; j < nc(); j++) {
-                for (unsigned int k = 0; k < rhs.nc(); k++) {
-                    *(result._m+(_cs*i+j)) += *(_m+(_cs*i+k)) * *(rhs._m+(_cs*k+j));
-                }
-            }
-        }
+	{,1,1,1,1,1}
+	{,1,3,4,6,7}
+	{,10,14,15,18,20}
 
+
+	{,1,1,10}
+	{,1,3,14}
+	{,1,4,15}
+	{,1,6,18}
+	{,1,7,20}
+
+	*/
+
+	size_t ra = nr();
+	size_t ca = nc();
+	size_t rb = rhs.nr();
+	size_t cb = rhs.nc();
+	
+
+	for ( size_t i = 0; i < ra; i++ )
+	{
+		std::cout << std::endl << std::endl;
+		for ( size_t j = 0; j < cb; j++ )
+		{
+				
+		    	*(result._m+(result._cs*i+j)) = std::transform_reduce(
+			row_begin(i), row_end(i), rhs.col_begin(j), 0,
+				[](const T& a, const T& b ) {
+			    		return a + b;
+				},
+				[](const T& a, const T& b ) {
+			    		return a * b;
+				}
+			);
+			
+		}
+	}
         return result;
     }
 
@@ -798,4 +897,3 @@ public:
 };
 
 #endif
-
