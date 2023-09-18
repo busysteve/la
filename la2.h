@@ -610,11 +610,11 @@ public:
 
     };
 
-    rowIterator row_begin(size_t r) {
+    rowIterator row_begin(size_t r) const {
         return rowIterator(_m+(_cs*r));
     }
 
-    rowIterator row_end(size_t r) {
+    rowIterator row_end(size_t r) const {
         return rowIterator(_m+(_cs*r+_cs));
     }
 
@@ -643,7 +643,7 @@ public:
     };
 
     colIterator col_begin(size_t c) const {
-        return colIterator(_cs, _m+(_cs+c));
+        return colIterator(_cs, _m+(c));
     }
 
     colIterator col_end(size_t c) const {
@@ -751,11 +751,14 @@ public:
 		{
 				
 		    	*(result._m+(result._cs*i+j)) = std::transform_reduce(
-			row_begin(i), row_end(i), rhs.col_begin(j), 0,
-				[](const T& a, const T& b ) {
+			//row_begin(j), row_end(j), rhs.col_begin(i), 0,
+			row_begin(j), row_end(j), rhs.col_begin(i), 0,
+				[i,j](const T& a, const T& b ) {
+					std::cout << "i=" << i << ":j=" << j << " " << a << "+" << b << std::endl;
 			    		return a + b;
 				},
-				[](const T& a, const T& b ) {
+				[i,j](const T& a, const T& b ) {
+					std::cout << "i=" << i << ":j=" << j << " " << a << "x" << b << std::endl;
 			    		return a * b;
 				}
 			);
