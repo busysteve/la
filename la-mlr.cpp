@@ -54,6 +54,33 @@ template <typename T> int VectorTest()
 		{
 			cerr << endl << e.what() << endl;
 		}
+
+
+
+
+		Matrix<T> mZ (  {	
+				{ 1.0, 1.0, 10.0 },
+				{ 1.0, 3.0, 14.0 },
+				{ 1.0, 4.0, 15.0 },
+				{ 1.0, 6.0, 18.0 },
+				{ 1.0, 7.0, 20.0 }	
+			} );
+		
+
+		cout << mZ << endl;
+
+		auto mZt = mZ;
+		
+		cout << mZt.transpose() << endl;
+		
+
+		
+		try{
+			cout << (mZt.mul(mZ)) << endl << endl;
+		} catch ( linear_algebra_error e )
+		{
+			cerr << endl << e.what() << endl;
+		}
 		
 	}
 	
@@ -74,5 +101,4 @@ int main()
 	
 	return 0;
 }
-
 
