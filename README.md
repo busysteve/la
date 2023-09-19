@@ -5,7 +5,9 @@ I never really "learned" linear algebra.  So I have decided to learn it by writi
 
 # Files
 
-The only file needed is **la.h**.  The other flies are for test cases and usage examples.
+The only file needed is **la.h**.  The other files are for test cases and usage examples.
+
+Don't forget to set **export OMP_NUM_THREADS=8** (or some other cpu core count number)
 
 ## Current features and capabilities
 
