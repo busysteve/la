@@ -21,7 +21,7 @@
 #include <tuple>
 #include <sstream>
 #include <iterator>
-
+#include <execution>
 
 #ifndef __BS_Matrix_H
 #define __BS_Matrix_H
@@ -365,7 +365,7 @@ public:
         _m = new T[new_rows*new_cols];
         
         for (unsigned int i = 0; i < new_rows; i++) {
-#pragma omp parallel for
+		#pragma omp parallel for
             for (unsigned int j = 0; j < new_cols; j++) {
                 std::copy( rhs._m, rhs._m+(new_rows*new_cols), _m );
             }
@@ -387,7 +387,7 @@ public:
         unsigned int new_rows = rhs.nr();
         unsigned int new_cols = rhs.nc();
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < new_rows; i++) {
             for (unsigned int j = 0; j < new_cols; j++) {
                 if ( *(_m+(new_cols*i+j)) != *(rhs._m+(new_cols*i+j)) ) {
@@ -411,7 +411,7 @@ public:
 
         Matrix result(_rs, _cs, 0.0);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
                 *(result._m+(_cs*i+j)) = *(_m+(_cs*i+j) + rhs._m+(_cs*i+j));
@@ -428,7 +428,7 @@ public:
         unsigned int _rs = rhs.nr();
         unsigned int _cs = rhs.nc();
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
                 *(_m+(_cs*i+j)) += *(rhs._m+(_cs*i+j));
@@ -444,7 +444,7 @@ public:
 
         Matrix result(_rs, _cs, 0.0);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
 
             for (unsigned int j = 0; j < _cs; j++) {
@@ -464,7 +464,7 @@ public:
 
         Matrix result(_rs, _cs, 0.0);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
 
             for (unsigned int j = 0; j < _cs; j++) {
@@ -481,7 +481,7 @@ public:
 
         Matrix result(_rs, _cs, 0.0);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
 
             for (unsigned int j = 0; j < _cs; j++) {
@@ -499,7 +499,7 @@ public:
         unsigned int _rs = rhs.nr();
         unsigned int _cs = rhs.nc();
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
                 *(_m+(_cs*i+j)) -= *(rhs._m+(_cs*i+j));
@@ -520,7 +520,7 @@ public:
 
         Matrix result(rs, cs, 0.0);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < rs; i++) {
             for (unsigned int j = 0; j < cs; j++) {
                 *( result._m+(_cs*i+j) ) = s * *(_m+(_cs*i+j));
@@ -558,7 +558,7 @@ public:
 
         Matrix result(rs, cs, 0.0);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < rs; i++) {
             for (unsigned int j = 0; j < cs; j++) {
                 result(i, j) = s / (*this)(i, j);
@@ -662,25 +662,7 @@ public:
         unsigned int rs = nr();
         unsigned int cs = rhs.nc();
 
-        std::cout << nr() << "x" << nc() << std::endl;
-        std::cout << rhs.nr() << "x" << rhs.nc() << std::endl;
-        std::cout << rs << "x" << cs << std::endl;
-
         Matrix result(rs, cs, 0.0);
-	/*
-
-	{,1,1,1,1,1}
-	{,1,3,4,6,7}
-	{,10,14,15,18,20}
-
-
-	{,1,1,10}
-	{,1,3,14}
-	{,1,4,15}
-	{,1,6,18}
-	{,1,7,20}
-
-	*/
 
 	size_t ra = nr();
 	size_t ca = nc();
@@ -688,19 +670,18 @@ public:
 	size_t cb = rhs.nc();
 	
 
+	#pragma omp parallel for
 	for ( size_t i = 0; i < ra; i++ )
 	{
-		std::cout << std::endl << std::endl;
+		#pragma omp parallel for
 		for ( size_t j = 0; j < cb; j++ )
 		{
-			std::cout << std::endl;
-			#pragma omp parallel for
+			//#pragma omp parallel for
 			for ( size_t k = 0; k < ca; k++ )
 			{
 				auto x = *(_m+(_cs*i+k));
 				auto y = *(rhs._m+(rhs._cs*k+j));
 				
-				std::cout << x << "*" << y << " ";
 				*(result._m+(result._cs*i+j)) += x * y;
 			}
 		}
@@ -718,25 +699,7 @@ public:
         unsigned int rs = nr();
         unsigned int cs = rhs.nc();
 
-        std::cout << nr() << "x" << nc() << std::endl;
-        std::cout << rhs.nr() << "x" << rhs.nc() << std::endl;
-        std::cout << rs << "x" << cs << std::endl;
-
         Matrix result(rs, cs, 0.0);
-	/*
-
-	{,1,1,1,1,1}
-	{,1,3,4,6,7}
-	{,10,14,15,18,20}
-
-
-	{,1,1,10}
-	{,1,3,14}
-	{,1,4,15}
-	{,1,6,18}
-	{,1,7,20}
-
-	*/
 
 	size_t ra = nr();
 	size_t ca = nc();
@@ -744,25 +707,22 @@ public:
 	size_t cb = rhs.nc();
 	
 
+	#pragma omp parallel for
 	for ( size_t i = 0; i < ra; i++ )
 	{
-		std::cout << std::endl << std::endl;
+		#pragma omp parallel for
 		for ( size_t j = 0; j < cb; j++ )
 		{
-				
-		    	*(result._m+(result._cs*i+j)) = std::transform_reduce(
-			//row_begin(j), row_end(j), rhs.col_begin(i), 0,
+		    	*(result._m+(result._cs*i+j)) = 
+		    	std::transform_reduce( std::execution::par,
 			row_begin(j), row_end(j), rhs.col_begin(i), 0,
 				[i,j](const T& a, const T& b ) {
-					std::cout << "i=" << i << ":j=" << j << " " << a << "+" << b << std::endl;
 			    		return a + b;
 				},
 				[i,j](const T& a, const T& b ) {
-					std::cout << "i=" << i << ":j=" << j << " " << a << "x" << b << std::endl;
 			    		return a * b;
 				}
 			);
-			
 		}
 	}
         return result;
@@ -778,7 +738,7 @@ public:
 	else
 		std::srand(seed);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
                 _m+(_cs*i+j) = start + ((T)std::rand()) / ( ( (T)RAND_MAX  ) / diff );
@@ -794,7 +754,7 @@ public:
     {
         Matrix result(_rs, _cs, 0.0);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
                 *( result._m+(_cs*i+j) ) = *(_m+(_cs*i+j) ) + rhs;
@@ -809,7 +769,7 @@ public:
     {
         Matrix result(_rs, _cs, 0.0);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
                 *( result._m+(_cs*i+j) ) = *(_m+(_cs*i+j) ) + rhs;
@@ -827,7 +787,7 @@ public:
         auto rs = _cs;
         Matrix result(rs, cs, 0.0);
 
-#pragma omp parallel for
+	#pragma omp parallel for
         for (unsigned int i = 0; i < _rs; i++) {
             for (unsigned int j = 0; j < _cs; j++) {
                 *(result._m+(_rs*j+i) ) = *(_m+(_cs*i+j) );
