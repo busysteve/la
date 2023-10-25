@@ -421,6 +421,26 @@ public:
         return result;
     }
 
+
+    Matrix<T> cross_add(const Matrix<T>& rhs) const 
+    {
+
+        if (_rs != rhs._rs || _cs != rhs._cs)
+            //return Matrix<T>();
+            throw matrix_algebra_error("Matrix dimensions do not match as needed for addition");
+
+        Matrix result(_rs, _cs, 0.0);
+
+	#pragma omp parallel for
+        for (unsigned int i = 0; i < _rs; i++) {
+            for (unsigned int j = 0; j < _cs; j++) {
+                *(result._m+(_cs*i+j)) = *(_m+(_cs*i+j) + rhs._m+(_cs*i+j));
+            }
+        }
+
+        return result;
+    }
+
     // Cumulative addition of this Matrix and another
 
     Matrix<T>& operator+=(const Matrix<T>& rhs)
@@ -509,7 +529,7 @@ public:
         return *this;
     }
 
-    // Left multiplication of this Matrix and another
+    // Left multiplication of this Matrix and scalar
 
     Matrix<T> mul( T s ) const
     {
@@ -690,7 +710,79 @@ public:
     }
 
 
-    Matrix<T> mul( const Matrix<T>& rhs) // const
+    Matrix<T> mmul(const Matrix<T>& rhs) const
+    {
+    
+        if (_rs != rhs._cs || _cs != rhs._rs)
+            //return Matrix<T>();
+            throw matrix_algebra_error("Matrix dimensions do not match as needed for multiplication");
+    
+        unsigned int rs = nr();
+        unsigned int cs = rhs.nc();
+
+        Matrix result(rs, cs, 0.0);
+
+	size_t ra = nr();
+	size_t ca = nc();
+	size_t rb = rhs.nr();
+	size_t cb = rhs.nc();
+	
+
+	#pragma omp parallel for
+	for ( size_t i = 0; i < ra; i++ )
+	{
+		#pragma omp parallel for
+		for ( size_t j = 0; j < cb; j++ )
+		{
+			//#pragma omp parallel for
+			for ( size_t k = 0; k < ca; k++ )
+			{
+				auto x = *(_m+(_cs*i+k));
+				auto y = *(rhs._m+(rhs._cs*k+j));
+				
+				*(result._m+(result._cs*i+j)) += x * y;
+			}
+		}
+	}
+        return result;
+    }
+
+
+    Matrix<T> mul(const Matrix<T>& rhs) const
+    {
+    
+        if (_rs != rhs._rs || _cs != rhs._cs)
+            //return Matrix<T>();
+            throw matrix_algebra_error("Matrix dimensions do not match as needed for cross multiplication");
+    
+        unsigned int rs = nr();
+        unsigned int cs = rhs.nc();
+
+        Matrix result(rs, cs, 0.0);
+
+	size_t ra = nr();
+	size_t ca = nc();
+	size_t rb = rhs.nr();
+	size_t cb = rhs.nc();
+	
+
+	#pragma omp parallel for
+	for ( size_t i = 0; i < ra; i++ )
+	{
+		#pragma omp parallel for
+		for ( size_t j = 0; j < ca; j++ )
+		{
+			auto x = *(_m+(_cs*i+j));
+			auto y = *(rhs._m+(rhs._cs*i+j));
+			
+			*(result._m+(result._cs*i+j)) = x * y;
+		}
+	}
+        return result;
+    }
+
+
+    Matrix<T> it_mul( const Matrix<T>& rhs) // const
     {
         if (_rs != rhs._cs || _cs != rhs._rs)
             //return Matrix<T>();
